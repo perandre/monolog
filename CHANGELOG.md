@@ -1,3 +1,9 @@
+### 3.10.1 (unreleased)
+
+  * Added `maxTraceLength` config option to NormalizerFormatter to limit stack trace frames in normalized exceptions (#2015)
+  * Fixed undefined array key in DeduplicationHandler when concurrent processes read partially written lines (#2020)
+  * Fixed missing timezone support in RotatingFileHandler date calculations (#2022)
+
 ### 3.10.0 (2026-01-02)
 
   * Added automatic directory cleanup in RotatingFileHandler (#2000)
