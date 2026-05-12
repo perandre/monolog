@@ -340,4 +340,26 @@ class RotatingFileHandlerTest extends \Monolog\Test\MonologTestCase
         $handler->handle($this->getRecord());
         $this->assertEquals('footest', file_get_contents($log));
     }
+
+    public function testTimezoneAwareRotation()
+    {
+        $tz = new \DateTimeZone('Pacific/Auckland');
+        $handler = new RotatingFileHandler(__DIR__.'/Fixtures/foo.rot', 0, \Monolog\Level::Debug, true, null, false, RotatingFileHandler::FILE_PER_DAY, '{filename}-{date}', $tz);
+        $handler->setFormatter($this->getIdentityFormatter());
+        $handler->handle($this->getRecord());
+
+        $log = __DIR__.'/Fixtures/foo-'.(new \DateTimeImmutable('now', $tz))->format('Y-m-d').'.rot';
+        $this->assertTrue(file_exists($log));
+    }
+
+    public function testTimezoneAwareMonthlyRotation()
+    {
+        $tz = new \DateTimeZone('Pacific/Auckland');
+        $handler = new RotatingFileHandler(__DIR__.'/Fixtures/foo.rot', 0, \Monolog\Level::Debug, true, null, false, RotatingFileHandler::FILE_PER_MONTH, '{filename}-{date}', $tz);
+        $handler->setFormatter($this->getIdentityFormatter());
+        $handler->handle($this->getRecord());
+
+        $log = __DIR__.'/Fixtures/foo-'.(new \DateTimeImmutable('now', $tz))->format('Y-m').'.rot';
+        $this->assertTrue(file_exists($log));
+    }
 }

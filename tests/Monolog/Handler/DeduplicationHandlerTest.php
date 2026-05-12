@@ -152,8 +152,61 @@ class DeduplicationHandlerTest extends \Monolog\Test\MonologTestCase
         $this->assertFalse($test->hasWarningRecords());
     }
 
+    /**
+     * @covers Monolog\Handler\DeduplicationHandler::flush
+     * @covers Monolog\Handler\DeduplicationHandler::isDuplicate
+     */
+    public function testIsDuplicateSkipsIncompleteLines()
+    {
+        $test = new TestHandler();
+        $store = sys_get_temp_dir().'/monolog_dedup_incomplete.log';
+        @unlink($store);
+
+        // Write a store file with an incomplete line (simulating concurrent partial write)
+        file_put_contents($store, time() . ":ERROR:Foo\n" . time() . "\n");
+
+        $handler = new DeduplicationHandler($test, $store, Level::Debug);
+        $handler->handle($this->getRecord(Level::Error, 'Bar'));
+        $handler->flush();
+
+        // The incomplete line should be skipped, and the new record should pass through
+        $this->assertTrue($test->hasErrorRecords());
+
+        @unlink($store);
+    }
+
+    /**
+     * @covers Monolog\Handler\DeduplicationHandler::collectLogs
+     */
+    public function testCollectLogsUsesFileLocking()
+    {
+        $test = new TestHandler();
+        $store = sys_get_temp_dir().'/monolog_dedup_lock.log';
+        @unlink($store);
+
+        $handler = new DeduplicationHandler($test, $store, Level::Debug);
+
+        // Write old + recent entries
+        $old = (time() - 90000);
+        $recent = time();
+        file_put_contents($store, $old . ":ERROR:old\n" . $recent . ":ERROR:recent\n");
+
+        // Trigger GC by handling a record with old timestamps in the store
+        $handler->handle($this->getRecord(Level::Error, 'new message'));
+        $handler->flush();
+
+        // After GC, only the recent entry and the new entry should remain
+        $contents = file_get_contents($store);
+        $this->assertStringNotContainsString(':ERROR:old', $contents);
+        $this->assertStringContainsString(':ERROR:recent', $contents);
+
+        @unlink($store);
+    }
+
     public static function tearDownAfterClass(): void
     {
         @unlink(sys_get_temp_dir().'/monolog_dedup.log');
+        @unlink(sys_get_temp_dir().'/monolog_dedup_incomplete.log');
+        @unlink(sys_get_temp_dir().'/monolog_dedup_lock.log');
     }
 }
