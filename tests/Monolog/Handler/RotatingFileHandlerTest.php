@@ -340,4 +340,49 @@ class RotatingFileHandlerTest extends \Monolog\Test\MonologTestCase
         $handler->handle($this->getRecord());
         $this->assertEquals('footest', file_get_contents($log));
     }
+
+    public function testTimezoneUsedInInitialFilename()
+    {
+        $tz = new \DateTimeZone('Pacific/Auckland');
+        $expected = (new \DateTimeImmutable('now', $tz))->format('Y-m-d');
+
+        $handler = new RotatingFileHandler(
+            __DIR__.'/Fixtures/foo.rot',
+            0,
+            \Monolog\Level::Debug,
+            true,
+            null,
+            false,
+            RotatingFileHandler::FILE_PER_DAY,
+            '{filename}-{date}',
+            $tz,
+        );
+        $handler->setFormatter($this->getIdentityFormatter());
+        $handler->handle($this->getRecord());
+
+        $log = __DIR__.'/Fixtures/foo-'.$expected.'.rot';
+        $this->assertTrue(file_exists($log), 'Log file should use the provided timezone for the date in its filename');
+    }
+
+    public function testTimezoneUsedInNextRotationCalculation()
+    {
+        $tz = new \DateTimeZone('Pacific/Auckland');
+        $handler = new RotatingFileHandler(
+            __DIR__.'/Fixtures/foo.rot',
+            0,
+            \Monolog\Level::Debug,
+            true,
+            null,
+            false,
+            RotatingFileHandler::FILE_PER_DAY,
+            '{filename}-{date}',
+            $tz,
+        );
+
+        $reflection = new \ReflectionProperty($handler, 'nextRotation');
+        $nextRotation = $reflection->getValue($handler);
+
+        $expectedTomorrow = (new \DateTimeImmutable('tomorrow', $tz))->setTime(0, 0, 0);
+        $this->assertEquals($expectedTomorrow, $nextRotation, 'Next rotation should be calculated using the provided timezone');
+    }
 }
