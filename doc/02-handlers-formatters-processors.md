@@ -20,6 +20,8 @@
   It will also delete files older than `$maxFiles`. You should use
   [logrotate](https://linux.die.net/man/8/logrotate) for high profile
   setups though, this is just meant as a quick and dirty solution.
+  Supports timezone-aware rotation date calculations and automatically
+  cleans up empty directories left behind after old log files are removed.
 - [_SyslogHandler_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Handler/SyslogHandler.php): Logs records to the syslog.
 - [_ErrorLogHandler_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Handler/ErrorLogHandler.php): Logs records to PHP's
   [`error_log()`](https://www.php.net/manual/en/function.error-log.php) function.
@@ -102,7 +104,8 @@
   discarded. The main use of this is in case of critical failure like if your
   database is unreachable for example all your requests will fail and that
   can result in a lot of notifications being sent. Adding this handler reduces
-  the amount of notifications to a manageable level.
+  the amount of notifications to a manageable level. Uses exclusive file
+  locking (`LOCK_EX`) for safe concurrent access across multiple processes.
 - [_WhatFailureGroupHandler_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Handler/WhatFailureGroupHandler.php): This handler extends the _GroupHandler_ ignoring
    exceptions raised by each child handler. This allows you to ignore issues
    where a remote tcp connection may have died but you do not want your entire
@@ -129,7 +132,8 @@
   to put on top of an existing handler stack to disable it temporarily.
 - [_PsrHandler_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Handler/PsrHandler.php): Can be used to forward log records to an existing PSR-3 logger
 - [_TestHandler_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Handler/TestHandler.php): Used for testing, it records everything that is sent to it and
-  has accessors to read out the information.
+  has accessors to read out the information. Assertion methods are marked with `#[\NoDiscard]` to
+  ensure the result is checked in tests.
 - [_HandlerWrapper_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Handler/HandlerWrapper.php): A simple handler wrapper you can inherit from to create
  your own wrappers easily.
 - [_OverflowHandler_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Handler/OverflowHandler.php): This handler will buffer all the log messages it
@@ -141,7 +145,7 @@
 
 - [_LineFormatter_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Formatter/LineFormatter.php): Formats a log record into a one-line string.
 - [_HtmlFormatter_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Formatter/HtmlFormatter.php): Used to format log records into a human readable html table, mainly suitable for emails.
-- [_NormalizerFormatter_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Formatter/NormalizerFormatter.php): Normalizes objects/resources down to strings so a record can easily be serialized/encoded.
+- [_NormalizerFormatter_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Formatter/NormalizerFormatter.php): Normalizes objects/resources down to strings so a record can easily be serialized/encoded. Supports a `maxTraceLength` option to limit the number of stack trace frames included when normalizing exceptions.
 - [_ScalarFormatter_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Formatter/ScalarFormatter.php): Used to format log records into an associative array of scalar values.
 - [_JsonFormatter_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Formatter/JsonFormatter.php): Encodes a log record into json.
 - [_WildfireFormatter_](https://github.com/Seldaek/monolog/blob/main/src/Monolog/Formatter/WildfireFormatter.php): Used to format log records into the Wildfire/FirePHP protocol, only useful for the FirePHPHandler.
